@@ -5,11 +5,12 @@ library(expsmooth)
 library(lmtest)
 library(zoo)
 library(seasonal)
+library(tseries)
 
 well_data = read.csv("C:\\Users\\thebi\\OneDrive\\Documents\\GitHub\\fall2_hw_team6\\Time Series\\well_agg_with_impute.csv")
 
 #making ts object
-well_ts = ts(well_data$Corrected_w_imputations, start = c(2007,10), frequency = 24)
+well_ts = ts(well_data$Corrected_w_imputations, start = c(2007,10), frequency = 24*365.25)
 
 #decom
 decomp= stl(well_ts, s.window=7)
@@ -32,42 +33,36 @@ plot(well_station)
 decomp= stl(well_station, s.window=7)
 plot(decomp)
 
-acf(well_station, lag=40)
-pacf(well_station,lag=40)
+acf(well_station, lag=60)
+pacf(well_station,lag=60)
 
-auto = auto.arima(diff(well_station, 24))
-#Output: Series: diff(well_station, 12) 
-# ARIMA(5,0,0)(2,0,0)[24] with zero mean 
+auto = auto.arima(well_station)
+# ARIMA(1,0,2)(2,0,1)[24] with zero mean 
 # 
 # Coefficients:
-#   ar1     ar2     ar3     ar4      ar5    sar1    sar2
-# 0.3389  0.1667  0.0479  0.0121  -0.0067  0.0382  0.0365
-# s.e.     NaN  0.0030     NaN  0.0025      NaN  0.0038     NaN
+#   ar1      ma1     ma2    sar1    sar2     sma1
+# 0.7202  -0.3276  0.0618  0.4860  0.0214  -0.4042
+# s.e.  0.0054   0.0062  0.0044  0.0348  0.0052   0.0347
 # 
-# sigma^2 estimated as 0.0001781:  log likelihood=271739.4
-# AIC=-543462.8   AICc=-543462.8   BIC=-543387.2
-summary(auto)
-
-
-well_arima = arima(well_station, order=c(5, 0, 0), seasonal=c(2, 0, 0), method="ML") #Why isn't it running seasonal
-# Call:
-#   arima(x = well_station, order = c(1, 0, 0))
-# 
-# Coefficients:
-#   ar1  intercept
-# 0.5144      0e+00
-# s.e.  0.0028      1e-04
-# 
-# sigma^2 estimated as 0.0001004:  log likelihood = 298627.6,  aic = -597249.3
+# sigma^2 estimated as 9.516e-05:  log likelihood=301163.6
+# AIC=-602313.3   AICc=-602313.3   BIC=-602247.1
 # 
 # Training set error measures:
-#   ME      RMSE         MAE MPE MAPE      MASE       ACF1
-# Training set -5.765189e-08 0.0100223 0.005343962 NaN  Inf 0.8283618 -0.1037829
+#   ME        RMSE         MAE MPE MAPE      MASE          ACF1
+# Training set 1.102839e-06 0.009754908 0.005389747 NaN  Inf 0.8030551 -6.659348e-05
+summary(auto)
+acf(auto$residuals, lag=40)
+pacf(auto$residuals, lag=40)
+
+
+well_arima = Arima(well_station, order=c(1, 0, 2), seasonal = c(2, 0, 1), method="ML")
 summary(well_arima)
+acf(well_arima$residuals, lag=60)
+pacf(well_arima$residuals, lag=60)
 
 White.LB <- rep(NA, 10)
 for(i in 1:10){
-  White.LB[i] <- Box.test(well_arima$residuals, lag = i, type = "Ljung", fitdf = 1)$p.value
+  White.LB[i] <- Box.test(auto$residuals, lag = i, type = "Ljung", fitdf = 1)$p.value
 }
 
 White.LB <- pmin(White.LB, 0.2)
@@ -75,10 +70,12 @@ barplot(White.LB, main = "Ljung-Box Test P-values", ylab = "Probabilities", xlab
 abline(h = 0.01, lty = "dashed", col = "black")
 abline(h = 0.05, lty = "dashed", col = "black")
 
+arima.trig<-Arima(well_station,order=c(3,0,2),xreg=fourier(well_station,K=7))   #fourier is a combination of fitting sines and cosines
+# K= _ means how many sine/cosine terms you want
+summary(arima.trig)
+acf(arima.trig$residuals, lag=40)
+pacf(arima.trig$residuals, lag=40)
 
-
-
-
-
+plot(arima.trig$residuals)
 
            
