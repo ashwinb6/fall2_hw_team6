@@ -1,13 +1,25 @@
 library(arules)
 library(haven)
 
-rest = read.transactions("C:\\Users\\thebi\\OneDrive\\Documents\\Data Mining\\restaurantData.csv", sep=",")
+rest = read.transactions("C:\\Users\\thebi\\OneDrive\\Documents\\Data Mining\\restaurantData.csv", 'single', skip = 1, sep = ",", cols = c(3, 1))
 summary(rest)
 
 inspect(rest[1:10])
 itemFrequency(rest)
 
-rules = apriori(rest)
+rules1 = apriori(rest)
+summary(rules1)
+rules = apriori(rest, parameter = list(support = .05, confidence = .25, minlen = 2, maxlen=2))
 summary(rules)
+rules
 
-inspect(rules[1:3])
+inspect(sort(rules, by = "lift")[1:8])
+
+meats = subset(rules, items %in% c("Filet Mignon","Pork Tenderloin","Roast Chicken", "Duck"))
+inspect(sort(meats, by="lift"))
+
+# ~~~~~Meat           =>  Wine Pairings~~~~~~~
+# {Filet Mignon}      => {Blackstone Merlot}
+# {Roast Chicken}     => {Duckhorn Chardonnay}
+# {Duck}              => {Duckhorn Chardonnay}
+# {Pork Tenderloin}   => {Cantina Pinot Bianco}
