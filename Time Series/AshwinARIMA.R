@@ -16,17 +16,18 @@ well_ts = ts(well_data$Corrected_w_imputations, start = c(2007,10), frequency = 
 decomp= stl(well_ts, s.window=7)
 plot(decomp)
 
-#training and holdout
-well_train=subset(well_ts, end=length(well_ts)-169)
-  #holdout made from 24*7(last week of well data)
-well_holdout=subset(well_ts,start=length(well_ts)-168)
 
 #stationary after taking differences
 adf.test(well_ts, alternative=c("stationary"), k=2)
-well_station = diff(well_ts, differences=1)
-adf.test(well_station, alternative = c("stationary"), k=2)
+well_diff = diff(well_ts, differences=1)
+adf.test(well_diff, alternative = c("stationary"), k=2)
 plot(well_ts)
-plot(well_station)
+plot(well_diff)
+
+#training and holdout
+well_station=subset(well_diff, end=length(well_ts)-169)
+#holdout made from 24*7(last week of well data)
+well_holdout=subset(well_diff,start=length(well_ts)-168)
 
 
 #this decomp plot looks really odd??
@@ -62,7 +63,7 @@ pacf(well_arima$residuals, lag=60)
 
 White.LB <- rep(NA, 10)
 for(i in 1:10){
-  White.LB[i] <- Box.test(auto$residuals, lag = i, type = "Ljung", fitdf = 1)$p.value
+  White.LB[i] <- Box.test(arima.trig$residuals, lag = i, type = "Ljung", fitdf = 1)$p.value
 }
 
 White.LB <- pmin(White.LB, 0.2)
@@ -70,9 +71,9 @@ barplot(White.LB, main = "Ljung-Box Test P-values", ylab = "Probabilities", xlab
 abline(h = 0.01, lty = "dashed", col = "black")
 abline(h = 0.05, lty = "dashed", col = "black")
 
-arima.trig<-Arima(well_station,order=c(3,0,2),xreg=fourier(well_station,K=7))   #fourier is a combination of fitting sines and cosines
+arima.trig<-Arima(well_station,order=c(4,0,3),xreg=fourier(well_station,K=4))   #fourier is a combination of fitting sines and cosines
 # K= _ means how many sine/cosine terms you want
-summary(arima.trig)
+# summary(arima.trig)
 acf(arima.trig$residuals, lag=40)
 pacf(arima.trig$residuals, lag=40)
 
