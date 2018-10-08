@@ -29,8 +29,10 @@ well_station=subset(well_diff, end=length(well_ts)-169)
 #holdout made from 24*7(last week of well data)
 well_holdout=subset(well_diff,start=length(well_ts)-168)
 
+acf(well_station, lag=40)
+pacf(well_station, lag=40)
 
-auto = auto.arima(well_station)
+auto = auto.arima(well_station, seasonal = FALSE, xreg=fourier(well_station,K=4))
 # ARIMA(1,0,2)(2,0,1)[24] with zero mean 
 # 
 # Coefficients:
@@ -46,10 +48,10 @@ auto = auto.arima(well_station)
 # Training set 1.102839e-06 0.009754908 0.005389747 NaN  Inf 0.8030551 -6.659348e-05
 summary(auto)
 acf(auto$residuals, lag=40)
-pacf(auto$residuals, lag=40)
+pacf(auto$residuals, lag=60)
 
 
-well_arima = Arima(well_station, order=c(5, 0, 2), method="ML")
+well_arima = Arima(well_station, order=c(2, 0, 2), method="ML")
 summary(well_arima)
 acf(well_arima$residuals, lag=60)
 pacf(well_arima$residuals, lag=60)
@@ -64,11 +66,11 @@ barplot(White.LB, main = "Ljung-Box Test P-values", ylab = "Probabilities", xlab
 abline(h = 0.01, lty = "dashed", col = "black")
 abline(h = 0.05, lty = "dashed", col = "black")
 
-arima.trig<-Arima(well_station,order=c(2,0,2), season = c(1, 0, 1), xreg=fourier(well_station,K=4))   #fourier is a combination of fitting sines and cosines
+arima.trig<-Arima(well_station,order=c(2,0,2), xreg=fourier(well_station,K=4))   #fourier is a combination of fitting sines and cosines
 # K= _ means how many sine/cosine terms you want
 # summary(arima.trig)
-acf(arima.trig$residuals, lag=40)
-pacf(arima.trig$residuals, lag=40)
+acf(arima.trig$residuals, lag=60)
+pacf(arima.trig$residuals, lag=60)
 
 plot(arima.trig$residuals)
 
