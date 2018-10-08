@@ -24,18 +24,11 @@ adf.test(well_diff, alternative = c("stationary"), k=2)
 plot(well_ts)
 plot(well_diff)
 
-#training and holdout
+#training(called well_station) and holdout
 well_station=subset(well_diff, end=length(well_ts)-169)
 #holdout made from 24*7(last week of well data)
 well_holdout=subset(well_diff,start=length(well_ts)-168)
 
-
-#this decomp plot looks really odd??
-decomp= stl(well_station, s.window=7)
-plot(decomp)
-
-acf(well_station, lag=60)
-pacf(well_station,lag=60)
 
 auto = auto.arima(well_station)
 # ARIMA(1,0,2)(2,0,1)[24] with zero mean 
@@ -56,14 +49,14 @@ acf(auto$residuals, lag=40)
 pacf(auto$residuals, lag=40)
 
 
-well_arima = Arima(well_station, order=c(1, 0, 2), seasonal = c(2, 0, 1), method="ML")
+well_arima = Arima(well_station, order=c(5, 0, 2), method="ML")
 summary(well_arima)
 acf(well_arima$residuals, lag=60)
 pacf(well_arima$residuals, lag=60)
 
 White.LB <- rep(NA, 10)
 for(i in 1:10){
-  White.LB[i] <- Box.test(arima.trig$residuals, lag = i, type = "Ljung", fitdf = 1)$p.value
+  White.LB[i] <- Box.test(well_arima$residuals, lag = i, type = "Ljung", fitdf = 1)$p.value
 }
 
 White.LB <- pmin(White.LB, 0.2)
@@ -71,7 +64,7 @@ barplot(White.LB, main = "Ljung-Box Test P-values", ylab = "Probabilities", xlab
 abline(h = 0.01, lty = "dashed", col = "black")
 abline(h = 0.05, lty = "dashed", col = "black")
 
-arima.trig<-Arima(well_station,order=c(4,0,3),xreg=fourier(well_station,K=4))   #fourier is a combination of fitting sines and cosines
+arima.trig<-Arima(well_station,order=c(2,0,2), season = c(1, 0, 1), xreg=fourier(well_station,K=4))   #fourier is a combination of fitting sines and cosines
 # K= _ means how many sine/cosine terms you want
 # summary(arima.trig)
 acf(arima.trig$residuals, lag=40)
