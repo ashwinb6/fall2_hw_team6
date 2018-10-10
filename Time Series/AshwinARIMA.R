@@ -32,7 +32,7 @@ well_holdout=subset(well_diff,start=length(well_ts)-168)
 acf(well_station, lag=40)
 pacf(well_station, lag=40)
 
-auto = auto.arima(well_station, seasonal = FALSE, xreg=fourier(well_station,K=4))
+auto = auto.arima(well_station, seasonal = FALSE, xreg=fourier(well_station,K=7))
 # ARIMA(1,0,2)(2,0,1)[24] with zero mean 
 # 
 # Coefficients:
@@ -66,12 +66,12 @@ barplot(White.LB, main = "Ljung-Box Test P-values", ylab = "Probabilities", xlab
 abline(h = 0.01, lty = "dashed", col = "black")
 abline(h = 0.05, lty = "dashed", col = "black")
 
-arima.trig<-Arima(well_station,order=c(2,0,2), xreg=fourier(well_station,K=4))   #fourier is a combination of fitting sines and cosines
+arima.trig<-Arima(well_station,order=c(2,0,2), xreg=fourier(well_station,K=50))   #fourier is a combination of fitting sines and cosines
 # K= _ means how many sine/cosine terms you want
-# summary(arima.trig)
+ summary(arima.trig)
 acf(arima.trig$residuals, lag=60)
 pacf(arima.trig$residuals, lag=60)
 
-plot(arima.trig$residuals)
+plot(arima.trig$residuals)s
 
            

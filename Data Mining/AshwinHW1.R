@@ -23,3 +23,12 @@ inspect(sort(meats, by="lift"))
 # {Roast Chicken}     => {Duckhorn Chardonnay}
 # {Duck}              => {Duckhorn Chardonnay}
 # {Pork Tenderloin}   => {Cantina Pinot Bianco}
+
+popmeal <- apriori(rest, parameter = list(support=0.05, confidence=0.25, minlen=3, maxlen=3))
+summary(popmeal)
+inspect(sort(popmeal, by = "count"))
+
+# lhs                       rhs                       support confidence      lift            count
+# [1]  {Cantina Pinot Bianco,Roasted Root Veg}     => {Pork Tenderloin}      0.13342746       1134
+# [5]  {Pork Tenderloin,Steamed Seasonal Veg}      => {Cantina Pinot Bianco} 0.12389693       1053
+# [6]  {Baked Beans,Cantina Pinot Bianco}          => {Pork Tenderloin}      0.06883163       585
