@@ -4,6 +4,9 @@ library(stringr)
 library(sqldf)
 library(lubridate)
 library(dplyr)
+library(imputeTS)
+
+
 
 read.csv("C:\\Users\\thebi\\OneDrive\\Documents\\Time Series\\Well_Data\\Well Data\\station_8722802.csv") # by default it will read in the first excel sheet "Rain"
 data <- read.csv("C:\\Users\\thebi\\OneDrive\\Documents\\Time Series\\Well_Data\\Well Data\\station_8722802.csv", header = TRUE) 
@@ -34,16 +37,29 @@ for (i in seq.Date(as.Date("2007-10-01"),as.Date("2018-06-12"),"days")){
   }
 }
 date_check[-1] 
+
+
 # -------------------- make a continuous time series including missing hours ----------------
 df_continuous <- data.frame(date_agg=date_check[-1])
 df_continuous <-left_join(df_continuous,df,by="date_agg")
 View(df_continuous)
 
 # check the dates with missing values
-missing_date = subset(df_continuous, is.na(corrected_well_ft))
+missing_date = subset(df_continuous, is.na(predicted_tide))
 missing_date
-df_continuous <- mutate(df_continuous,date_hour = date_agg,date_agg =NULL)
+df_continuous <- df_continuous %>%
+  mutate(date_hour = date_agg,date_agg =NULL)
 summary(df_continuous)
 
 # ------------------ save out data to csv file ------------------
-write.csv(df_continuous,file="hourly_well.csv")
+write.csv(df_continuous,file="hourly_tide.csv")
+
+
+# Aggregating Well and Tide Data ------------------------------------------
+final_data <- na.kalman(df_continuous)
+write.csv(final_data, file="final_tide.csv", row.names = F)
+summary(final_data)
+
+well_data = read.csv("C:\\Users\\thebi\\OneDrive\\Documents\\GitHub\\fall2_hw_team6\\Time Series\\well_agg_with_impute.csv", header = T)
+well_and_tide = cbind(final_data,well_data)
+View(well_and_tide)
