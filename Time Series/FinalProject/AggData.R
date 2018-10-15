@@ -76,7 +76,7 @@ dataRain$date_agg <- substr(dataRain$Date,1,13) # aggregated level
 class(data$Date)
 
 dfRain <- sqldf("select date_agg,
-            avg(RAIN_FT) as rain_ft from dataRain 
+            sum(RAIN_FT) as rain_ft from dataRain 
             group by date_agg")
 View(dfRain)
 dim(dfRain)
@@ -90,7 +90,7 @@ for (i in seq.Date(as.Date("2007-10-01"),as.Date("2018-06-12"),"days")){
   #print(i)
   for (j in seq(0,23)){
     jj <- str_pad(as.character(j),2,side="left",pad="0")
-    ele <- paste(i,jj,sep="-")
+    ele <- paste(i,jj,sep=" ")
     date_check <- c(date_check,ele)
   }
 }
