@@ -7,6 +7,17 @@ library(mapproj)
 library(dplyr)
 library(shiny)
 
+files <- list.files(path="../visualization/project/cleaned_well_data", pattern="*.csv", full.names=TRUE, recursive=FALSE)
+
+
+list_of_data <- list()
+
+for (file in files){
+  file_name <- substr(file, 44, (nchar(file) - 4))
+  print(file_name)
+  list_of_data[[file_name]] <- read.csv(file)
+}
+
 states <- map_data("state")
 florida <- filter(states, region == "florida")
 
@@ -103,8 +114,15 @@ server <- function(input, output, session) {
     cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
   }, ignoreNULL = FALSE)
   
+  
+  ts_plot <- reactive({
+    print(list_of_data[[input$mymap_marker_click$id]][, "well_ft"])
+    well_ts <- ts(list_of_data[[input$mymap_marker_click$id]][, "well_ft"], frequency = 12)
+    plot(well_ts)
+  })
+
   output$my_plot <- renderPlot(
-    plot(5, main = as.character(input$mymap_marker_click$id))
+      ts_plot()
   )
   
 }
