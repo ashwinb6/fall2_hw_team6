@@ -113,9 +113,17 @@ server <- function(input, output, session) {
   
   
   ts_plot <- reactive({
-    print(list_of_data[[input$mymap_marker_click$id]][, "well_ft"])
-    well_ts <- ts(list_of_data[[input$mymap_marker_click$id]][, "well_ft"], frequency = 12)
-    plot(well_ts)
+    
+    print(input$mymap_marker_click$id)
+    
+    if(is.null(input$mymap_marker_click$id)){
+      plot(0)
+    } else {
+      well_ts <- ts(list_of_data[[input$mymap_marker_click$id]][, "well_ft"], frequency = 12)
+      plot(well_ts)  
+    }
+    
+    
   })
 
   output$my_plot <- renderPlot(
