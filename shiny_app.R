@@ -99,12 +99,20 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   
   output$mymap <- renderLeaflet({
+    
+    leafIcons <- makeIcon(
+      iconUrl = "../visualization/well_pic.png",
+      iconWidth = 35, iconHeight = 25  )
+    
+    
+    
     leaflet() %>%
       addTiles() %>%
       addMarkers(lng = well_location$longitude, 
                  lat = well_location$latitude, 
                  popup = well_location$wells,
-                 layerId = well_location$wells)
+                 layerId = well_location$wells,
+                 icon = leafIcons)
   })
   
   points <- eventReactive(input$recalc, {
