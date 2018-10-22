@@ -101,7 +101,7 @@ server <- function(input, output, session) {
   output$mymap <- renderLeaflet({
     
     leafIcons <- makeIcon(
-      iconUrl = "./well_pic.png",
+      iconUrl = "well_pic.png",
       iconWidth = 35, iconHeight = 25  )
     
     
