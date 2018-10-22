@@ -14,6 +14,11 @@ dim(well_data)
 dim(rain_data)
 dim(tide_data)
 
+rain_station=subset(rain_data, end=length(rain_ts)-169)
+rain_holdout=subset(rain_data, start=length(rain_ts)-168)
+tide_station=subset(tide_data, end=length(tide_ts)-169)
+tide_holdout=subset(tide_data, start=length(tide_ts)-168)
+
 rain = as.vector(rain_station[,2])
 tide = as.vector(tide_station[,1])
 x.reg=cbind(rain,tide)
@@ -34,10 +39,18 @@ auto1 = auto.arima(res.model1,seasonal=T)
 # AIC=-603024   AICc=-603024   BIC=-602967.3
 # 
 # Training set error measures:
-#   ME        RMSE         MAE      MPE     MAPE     MASE         ACF1
+#                      ME        RMSE         MAE      MPE     MAPE     MASE         ACF1
 # Training set 1.049924e-06 0.009718486 0.005442875 4986.919 5117.863 0.623702 0.0004630211
 acf(auto1$residuals)
 pacf(auto1$residuals)
+
+model2= Arima(well_ts, order=c(2, 0, 10), xreg=x.reg) #MAPE = .16
+acf(model2$residuals)
+pacf(model2$residuals)
+
+model3= Arima(well_ts, order=c(4, 0, 6), xreg=x.reg)
+summary(model3)
+
 
 p.val=vector(length=20)
 for (i in 1:20)
@@ -67,11 +80,6 @@ plot(well_diff)
 well_station=subset(well_diff, end=length(well_ts)-169)
 #holdout made from 24*7(last week of well data)
 well_holdout=subset(well_diff,start=length(well_ts)-168)
-
-rain_station=subset(rain_data, end=length(rain_ts)-169)
-rain_holdout=subset(rain_data, start=length(rain_ts)-168)
-tide_station=subset(tide_data, end=length(tide_ts)-169)
-tide_holdout=subset(tide_data, start=length(tide_ts)-168)
 
 
 acf(well_station, lag=40)
