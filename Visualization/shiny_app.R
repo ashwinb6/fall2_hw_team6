@@ -7,13 +7,13 @@ library(mapproj)
 library(dplyr)
 library(shiny)
 
-files <- list.files(path="../visualization/project/cleaned_well_data", pattern="*.csv", full.names=TRUE, recursive=FALSE)
+files <- list.files(path="./cleaned_well_data/", pattern="*.csv", full.names=TRUE, recursive=FALSE)
 
 
 list_of_data <- list()
 
 for (file in files){
-  file_name <- substr(file, 44, (nchar(file) - 4))
+  file_name <- substr(file, 21, (nchar(file) - 4))
   print(file_name)
   list_of_data[[file_name]] <- read.csv(file)
 }
