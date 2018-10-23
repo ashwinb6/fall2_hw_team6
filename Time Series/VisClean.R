@@ -26,20 +26,17 @@ f319$time <- str_replace(f319$time, "1899-12-31 ","") # replace the time column 
 f319$date_new <- paste(f319$date,f319$time,sep="-")
 f319$date_new<- substr(f319$date_new,1,13)
 
-colnames(g852)
-g852$Time <- str_replace(g852$Time, "1899-12-31 ","") # replace the time column to get rid of ymd.
-g852$date_new <- paste(g852$Date,g852$Time,sep="-")
-g852$date_new<- substr(g852$date_new,1,13)
+colnames(g860)
+g860$time <- str_replace(g860$time, "1899-12-31 ","") # replace the time column to get rid of ymd.
+g860$date_new <- paste(g860$date,g860$time,sep="-")
+g860$date_new<- substr(g860$date_new,1,13)
 
 df2 <- sqldf("select date_new,
-            avg(Corrected) as well_ft from g852
+            avg(Corrected) as well_ft from g860
             where Code = 'A'
             group by date_new")
 View(df2)
 dim(df2)
-df2 = data.table(df2)
-with(df2, df2[(df2$Date >= "2007-10-01" & df2$Date <= "2018-04-09")])
-
 
 # ------------------ generating a continuous sequence of times ------------
 date_check <- c()
@@ -69,4 +66,4 @@ df_continuous <- df_continuous %>%
 summary(df_continuous)
 df_continuous = na.kalman(df_continuous)
 View(df_continuous)
-fwrite(df_continuous, "G-580.csv")
+fwrite(df_continuous, "G-860.csv")
