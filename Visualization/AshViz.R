@@ -1,10 +1,22 @@
 library(shiny)
 library(leaflet)
+library(leaflet)
 library(ggplot2)
 library(maps)
 library(mapproj)
 library(dplyr)
 library(shiny)
+
+files <- list.files(path="./cleaned_well_data/", pattern="*.csv", full.names=TRUE, recursive=FALSE)
+
+
+list_of_data <- list()
+
+for (file in files){
+  file_name <- substr(file, 21, (nchar(file) - 4))
+  print(file_name)
+  list_of_data[[file_name]] <- read.csv(file)
+}
 
 states <- map_data("state")
 florida <- filter(states, region == "florida")
@@ -25,13 +37,12 @@ well_location <- data.frame(
             "F-179",
             "F-45",
             "G-852",
-            "F-291",
-            "G-561",
-            "G-1220",
-            "G-2147",
-            "G-1260",
-            "G-2866",
-            "PB-1680"
+            "G-561_T",
+            "G-1220_T",
+            "G-2147_T",
+            "G-1260_T",
+            "G-2866_T",
+            "PB-1680_T"
   ),
   longitude = c(
     -80.34908333,
@@ -41,7 +52,6 @@ well_location <- data.frame(
     -80.2464,
     -80.20415556,
     -80.17555556,
-    -80.14685278,
     -80.13888889,
     -80.14625,
     -80.10125,
@@ -57,7 +67,6 @@ well_location <- data.frame(
     25.74564722,
     25.82883889,
     25.91027778,
-    26.00316111,
     26.09583333,
     26.13106111,
     26.25044444,
@@ -67,7 +76,6 @@ well_location <- data.frame(
   )
   
 )
-
 
 r_colors <- rgb(t(col2rgb(colors()) / 255))
 names(r_colors) <- colors()
@@ -84,27 +92,61 @@ ui <- fluidPage(
     column(5,
            plotOutput("my_plot")
     )
-  )
+  ),
+  
+  mainPanel(
+    
+    # Output: Tabset w/ plot, summary, and table ----
+    tabsetPanel(type = "tabs",
+                tabPanel("Plot", plotOutput("my_plot")),
+                tabPanel("Summary", verbatimTextOutput("summary")),
+                tabPanel("Table", tableOutput("table"))
+    ))
 )
 
 server <- function(input, output, session) {
   
   output$mymap <- renderLeaflet({
+    
+    leafIcons <- makeIcon(
+      iconUrl = "well_pic.png",
+      iconWidth = 35, iconHeight = 25  )
+    
+    
+    
     leaflet() %>%
       addTiles() %>%
       addMarkers(lng = well_location$longitude, 
                  lat = well_location$latitude, 
                  popup = well_location$wells,
-                 layerId = well_location$wells)
+                 layerId = well_location$wells,
+                 icon = leafIcons)
   })
   
   points <- eventReactive(input$recalc, {
     cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
   }, ignoreNULL = FALSE)
   
+  
+  ts_plot <- reactive({
+    
+    print(input$mymap_marker_click$id)
+    
+    if(is.null(input$mymap_marker_click$id)){
+      plot(0)
+    } else {
+      well_ts <- ts(list_of_data[[input$mymap_marker_click$id]][, "well_ft"], frequency = 12)
+      plot(well_ts)  
+    }
+    
+    
+  })
+  
   output$my_plot <- renderPlot(
-    plot(5, main = as.character(input$mymap_marker_click$id))
+    ts_plot()
   )
+  
+  
   
 }
 

@@ -46,12 +46,12 @@ View(df_continuous)
 
 # check the dates with missing values
 missing_date = subset(df_continuous, is.na(predicted_tide))
-missing_date
+count(missing_date)
 df_continuous <- df_continuous %>%
   mutate(date_hour = date_agg,date_agg =NULL)
+df_continuous = na.kalman(df_continuous)
 summary(df_continuous)
-
-# ------------------ save out data to csv file ------------------
+#  ------------------ save out data to csv file ------------------
 write.csv(df_continuous,file="hourly_tide.csv")
 
 
