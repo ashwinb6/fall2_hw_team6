@@ -26,8 +26,19 @@ for (file in files){
   print(file)
   file_name <- substr(file, 19, (nchar(file) - 4))
   print(file_name)
-  list_of_data[[file_name]] <- read.csv(file, stringsAsFactors = F)
+  temp_df <- read.csv(file, stringsAsFactors = F)
+  temp_df$date_time <- as.POSIXct(temp_df$time,  '%Y-%m-%d %H:%M:%S', tz = "")
+  temp_df$year <- as.numeric( substr( temp_df$time, 1, 4) )
+  #temp_ts <- ts(temp_df$well_impute, frequency = 365.25)
+  #temp_decomp <- stl(temp_ts, s.window = 7)
+  #temp_season <- temp_decomp$time.series[,1]
+  #temp_trend <- temp_decomp$time.series[,2]
+  #temp_df$trend <- temp_trend
+  #temp_df$seas_adj <- temp_df$well_impute - temp_season
+  list_of_data[[file_name]] <- temp_df
 }
+
+vis_stats <- read.csv("./Visual_stat.csv", stringsAsFactors = F)
 
 well_location <- data.frame(
   wells = c("G-3549",
@@ -99,20 +110,8 @@ ui <- dashboardPage(
         #menuSubItem("Watersheds", tabName = "m_water", icon = icon("map"))
       ),
       menuItem(
-        "Explore Individual Wells", 
+        "Explore Wells", 
         tabName = "with_map", 
-        icon = icon("globe")
-        #menuSubItem("Watersheds", tabName = "m_water", icon = icon("map"))
-      ),
-      menuItem(
-        "Compare Multiple Wells", 
-        tabName = "compare", 
-        icon = icon("globe")
-        #menuSubItem("Watersheds", tabName = "m_water", icon = icon("map"))
-      ),
-      menuItem(
-        "Conclusion", 
-        tabName = "conclude", 
         icon = icon("globe")
         #menuSubItem("Watersheds", tabName = "m_water", icon = icon("map"))
       )
@@ -158,11 +157,11 @@ ui <- dashboardPage(
                            #selectInput('y', 'Y', c("some name", "other name")),
                            #selectInput('color', 'Color', c("some name", "other name")),
                            h4("Select the time span to view"),
-                           sliderInput('sampleSize', 'Sample Size', 
-                                       min=1, 
-                                       max=50, 
-                                       value=25, 
-                                       step=5, 
+                           sliderInput('years', 'Years of Data', 
+                                       min=2007, 
+                                       max=2018, 
+                                       value=c(2007,2018), 
+                                       step=1, 
                                        round=0),
                            br(),
                            checkboxInput('forecast', 'Show Forecasted Values'),
@@ -173,18 +172,8 @@ ui <- dashboardPage(
                 )
               )
             )
-            
-                   
-                  
           )
-        ),
-      tabItem(
-        tabName = "compare",
-        box(
-          collapsible = TRUE, height = "100%", width = "100%"
         )
-      )
-        
       )
     )
   )
@@ -259,54 +248,72 @@ server <- function(input, output, session) {
     # the graph
     #-------------------------------------------------------------------------------------    
     
-    if(is.null(input$mymap_marker_click$id)){
-      selected_data <- list_of_data[["PB-1680_T"]]
-      
-      print(head(selected_data))
-      
-      selected_data$date_time <- as.POSIXct(selected_data$time,  '%Y-%m-%d %H:%M:%S', tz = "")
-      
-      ggplot(selected_data) +
-        geom_line(mapping = aes(x = as.numeric(date_time), y = well_impute)) +
-        ggtitle(paste0("Well Elevation (Feet) for ", "PB-1680_T"))+
-        xlab("Time") + 
-        ylab("Well depth(feet)") +
-        theme(plot.title = element_text(hjust = 0.5,size=22),
-              axis.title=element_text(size=18),
-              axis.text = element_text(size=18,lineheight = 5),
-              legend.position = c(0.7, 0.8),
-              legend.text = element_text( size=18),
-              legend.title = element_blank(),
-              plot.margin=unit(c(0.5,0.5,0.8,0.8),"cm"),
-              panel.background = element_rect(fill = "aliceblue",colour = "aliceblue",
-                                              size = 0.5, linetype = "solid"),
-              panel.grid.major = element_line(size = 0.5, linetype = 'solid',
-                                              colour = "white")
-        )
-    } else {
-      selected_data <- list_of_data[[input$mymap_marker_click$id]]
-      
-      selected_data$date_time <- as.POSIXct(selected_data$time,  '%Y-%m-%d %H:%M:%S', tz = "")
-      
-      #plot(well_ts)
-      ggplot(selected_data) +
-        geom_line(mapping = aes(x = as.numeric(date_time), y = well_impute)) +
-        ggtitle(paste0("Well Elevation (Feet) for ", as.character(input$mymap_marker_click$id)))+
-        xlab("Time") + 
-        ylab("Well depth(feet)") +
-        theme(plot.title = element_text(hjust = 0.5,size=22),
-              axis.title=element_text(size=18),
-              axis.text = element_text(size=18,lineheight = 5),
-              legend.position = c(0.7, 0.8),
-              legend.text = element_text( size=18),
-              legend.title = element_blank(),
-              plot.margin=unit(c(0.5,0.5,0.8,0.8),"cm"),
-              panel.background = element_rect(fill = "aliceblue",colour = "aliceblue",
-                                              size = 0.5, linetype = "solid"),
-              panel.grid.major = element_line(size = 0.5, linetype = 'solid',
-                                              colour = "white")
-        )
+    start_year <- input$years[1]
+    end_year <- input$years[2]
+    
+    well <- input$mymap_marker_click$id
+    
+    if(is.null(well)){
+      well <- "PB-1680_T"
     }
+    
+    selected_data <- list_of_data[[well]]
+    
+    if(input$forecast){
+      
+      selected_data <- filter(selected_data, !is.na(forecast))
+      
+      main_plot <- ggplot(selected_data) +
+        geom_line(mapping = aes(x = date_time, y = well_impute, colour = "well_impute")) +
+        geom_line(mapping = aes(x = date_time, y = forecast, colour = "forecast")) +
+        ggtitle(paste0("Well Elevation (Feet) for ", well))+
+        xlab("Time (years)") + 
+        ylab("Well Elevation (feet)") +
+        theme(plot.title = element_text(hjust = 0.5,size=26),
+              axis.title=element_text(size=22),
+              axis.text = element_text(size=16,lineheight = 5),
+              legend.position = c(0.7, 0.8),
+              legend.text = element_text( size=18),
+              legend.title = element_blank(),
+              plot.margin=unit(c(0.5,0.5,0.8,0.8),"cm"),
+              panel.background = element_rect(fill = "aliceblue",colour = "aliceblue",
+                                              size = 0.5, linetype = "solid"),
+              panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                              colour = "white"),
+              axis.title.x = element_text(margin = margin(t = 24)),
+              axis.title.y = element_text(margin = margin(r = 24))
+        ) + 
+        scale_x_datetime(date_labels = "%b %Y") +
+        scale_colour_manual(name="Time Series Label",
+                            values=c("red", "navy"), labels = c("Predicted", "Actual"))
+    } else {
+      
+      selected_data <- filter(selected_data, year >= start_year, year <= end_year)
+      
+      main_plot <- ggplot(selected_data) +
+        geom_line(mapping = aes(x = date_time, y = well_impute)) +
+        ggtitle(paste0("Well Elevation (Feet) for ", well))+
+        xlab("Time (years)") + 
+        ylab("Well Elevation (feet)") +
+        theme(plot.title = element_text(hjust = 0.5,size=26),
+              axis.title=element_text(size=22),
+              axis.text = element_text(size=16,lineheight = 5),
+              legend.position = c(0.7, 0.8),
+              legend.text = element_text( size=18),
+              legend.title = element_blank(),
+              plot.margin=unit(c(0.5,0.5,0.8,0.8),"cm"),
+              panel.background = element_rect(fill = "aliceblue",colour = "aliceblue",
+                                              size = 0.5, linetype = "solid"),
+              panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                              colour = "white"),
+              axis.title.x = element_text(margin = margin(t = 24)),
+              axis.title.y = element_text(margin = margin(r = 24))
+        ) + 
+        scale_x_datetime(date_labels = "%b %Y")
+    }
+    
+    main_plot
+    
     
     
   })
@@ -317,31 +324,58 @@ server <- function(input, output, session) {
   
   ts_table <- reactive({
     
-    well <- input$mymap_marker_click$id
+    well_name <- input$mymap_marker_click$id
     
-    if(is.null(well)){
-      well <- "select well"
-      long <- "select well"
-      lat <- "select well"
-    } else {
-      selected_well <- filter(well_location, wells == well)
-      long <- selected_well$longitude
-      lat <- selected_well$latitude 
+    if(is.null(well_name)){
+      well_name <- "PB-1680_T"
     }
-   
-   well_df <- data.frame(
-    "Well" = c(as.character(well)),
-    "Lat" = c(lat),
-    "Long" = c(long),
-    "Start Date" = c("some date"),
-    "End Date" = c("some date"),
-    "Mean" = c(0.0),
-    "St Dev" = c(0.0),
-    "Arima Model" = c("Arima(2, 1, 2)"),
-    "MAPE" = c(0.0),
-    "AIC" = c(0.0)
-  )
-  
+    
+    selected_stats <- filter(vis_stats, well == well_name)
+    print(selected_stats)
+    selected_well <- filter(well_location, wells == well_name)
+    long <- selected_well$longitude
+    lat <- selected_well$latitude 
+    #selected_well_df <- list_of_data[[well]]
+    #start_date <- strsplit(as.character(selected_well_df$date_time[1]), " ")[[1]][1]
+    #end_date <- strsplit(as.character(selected_well_df$date_time[nrow(selected_well_df)]), " ")[[1]][1]
+    start_date <- selected_stats$start
+    end_date <- selected_stats$end
+    num_missing <- selected_stats$missing
+    
+    if(input$forecast){
+      
+      model <- selected_stats$model
+      mape <- selected_stats$mape
+      aic <- selected_stats$aic
+      
+      well_df <- data.frame(
+        "Well" = c(as.character(well_name)),
+        "Lat" = c(lat),
+        "Long" = c(long),
+        "Start Date" = c(start_date),
+        "End Date" = c(end_date),
+        "Num Missing" = c(num_missing),
+        "Model" = c(model),
+        "MAPE" = c(mape),
+        "AIC" = c(aic)
+      )
+      
+      
+    } else {
+      mean <- selected_stats$mean
+      stdev <- selected_stats$stdev
+      
+      well_df <- data.frame(
+        "Well" = c(as.character(well_name)),
+        "Lat" = c(lat),
+        "Long" = c(long),
+        "Start Date" = c(start_date),
+        "End Date" = c(end_date),
+        "Mean" = c(mean),
+        "St Dev" = c(stdev),
+        "Num Missing" = c(num_missing)
+      )
+    }
     well_df
   })
   
