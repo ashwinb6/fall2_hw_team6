@@ -6,6 +6,7 @@ library(sqldf)
 library(lubridate)
 library(dplyr)
 library(imputeTS)
+library(date)
 
 f45 = read_excel('C:\\Users\\thebi\\OneDrive\\Documents\\Time Series\\Well_Data\\Well Data\\F-45.xlsx', sheet="Well")
 colnames(f45)
@@ -25,19 +26,20 @@ f319$time <- str_replace(f319$time, "1899-12-31 ","") # replace the time column 
 f319$date_new <- paste(f319$date,f319$time,sep="-")
 f319$date_new<- substr(f319$date_new,1,13)
 
-colnames(g580)
-g580$time <- str_replace(g580$time, "1899-12-31 ","") # replace the time column to get rid of ymd.
-g580$date_new <- paste(g580$date,g580$time,sep="-")
-g580$date_new<- substr(g580$date_new,1,13)
+colnames(g852)
+g852$Time <- str_replace(g852$Time, "1899-12-31 ","") # replace the time column to get rid of ymd.
+g852$date_new <- paste(g852$Date,g852$Time,sep="-")
+g852$date_new<- substr(g852$date_new,1,13)
 
 df2 <- sqldf("select date_new,
-            avg(Corrected) as well_ft from g580
+            avg(Corrected) as well_ft from g852
             where Code = 'A'
             group by date_new")
-
 View(df2)
-dim(df)
 dim(df2)
+df2 = data.table(df2)
+with(df2, df2[(df2$Date >= "2007-10-01" & df2$Date <= "2018-04-09")])
+
 
 # ------------------ generating a continuous sequence of times ------------
 date_check <- c()
@@ -55,7 +57,7 @@ for (i in seq.Date(as.Date("2007-10-01"),as.Date("2018-04-09"),"days")){
 date_check[-1] 
 
 # -------------------- make a continuous time series including missing hours ----------------
-df_continuous <- data.frame(date_new=date_check[-11])
+df_continuous <- data.frame(date_new=date_check[-1])
 df_continuous <-left_join(df_continuous,df2,by="date_new")
 View(df_continuous)
 dim(df_continuous)
@@ -65,8 +67,6 @@ count(missing_date)
 df_continuous <- df_continuous %>%
   mutate(date_hour = NULL)
 summary(df_continuous)
-df_continuous = head(df_continuous, -11)
-
 df_continuous = na.kalman(df_continuous)
 View(df_continuous)
 fwrite(df_continuous, "G-580.csv")
