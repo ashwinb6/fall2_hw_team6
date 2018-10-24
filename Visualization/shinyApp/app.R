@@ -27,14 +27,22 @@ for (file in files){
   file_name <- substr(file, 19, (nchar(file) - 4))
   print(file_name)
   temp_df <- read.csv(file, stringsAsFactors = F)
-  temp_df$date_time <- as.POSIXct(temp_df$time,  '%Y-%m-%d %H:%M:%S', tz = "")
-  temp_df$year <- as.numeric( substr( temp_df$time, 1, 4) )
+  
+  if(file_name %in% c("F-179", "F-319", "G-1260_T", "G-2866_T")){
+      temp_df$date_time <- as.POSIXct(temp_df$time, "%m/%d/%y %H:%M", tz = "")
+      temp_df$year <- as.numeric( substr( temp_df$date_time, 1, 4) )
+  } else {
+      temp_df$date_time <- as.POSIXct(temp_df$time,  '%Y-%m-%d %H:%M:%S', tz = "")
+      temp_df$year <- as.numeric( substr( temp_df$time, 1, 4) )
+  }
+  
   #temp_ts <- ts(temp_df$well_impute, frequency = 365.25)
   #temp_decomp <- stl(temp_ts, s.window = 7)
   #temp_season <- temp_decomp$time.series[,1]
   #temp_trend <- temp_decomp$time.series[,2]
   #temp_df$trend <- temp_trend
   #temp_df$seas_adj <- temp_df$well_impute - temp_season
+  ncol(temp_df)
   list_of_data[[file_name]] <- temp_df
 }
 
@@ -165,8 +173,8 @@ ui <- dashboardPage(
                                        round=0),
                            br(),
                            checkboxInput('forecast', 'Show Forecasted Values'),
-                           checkboxInput('season', 'Show Seasonally Adjusted Values'),
-                           checkboxInput('trend', 'Show Trend Line Overlaid')
+                           checkboxInput('rain', 'Show Hourly Rain Data')
+                           #checkboxInput('trend', 'Show Trend Line Overlaid')
                          )
                        )
                 )
@@ -272,11 +280,11 @@ server <- function(input, output, session) {
         theme(plot.title = element_text(hjust = 0.5,size=26),
               axis.title=element_text(size=22),
               axis.text = element_text(size=16,lineheight = 5),
-              legend.position = c(0.7, 0.8),
-              legend.text = element_text( size=18),
+              legend.position = "top",
+              legend.text = element_text( size=16),
               legend.title = element_blank(),
               plot.margin=unit(c(0.5,0.5,0.8,0.8),"cm"),
-              panel.background = element_rect(fill = "aliceblue",colour = "aliceblue",
+              panel.background = element_rect(fill = "aliceblue",colour = "grey",
                                               size = 0.5, linetype = "solid"),
               panel.grid.major = element_line(size = 0.5, linetype = 'solid',
                                               colour = "white"),
@@ -286,6 +294,37 @@ server <- function(input, output, session) {
         scale_x_datetime(date_labels = "%b %Y") +
         scale_colour_manual(name="Time Series Label",
                             values=c("red", "navy"), labels = c("Predicted", "Actual"))
+    } else if (input$rain & ("rain_impute" %in% colnames(selected_data))){
+      
+      selected_data <- filter(selected_data, year >= start_year, year <= end_year)
+      
+      main_plot <- ggplot(selected_data) +
+        geom_line(mapping = aes(x = date_time, y = well_impute, colour = "well_impute")) +
+        geom_line(mapping = aes(x = date_time, y = rain_impute * 5, colour = "rain_impute")) +
+        ggtitle(paste0("Well Elevation (Feet) for ", well))+
+        xlab("Time (years)") + 
+        ylab("Well Elevation (ft)") +
+        theme(plot.title = element_text(hjust = 0.5,size=26),
+              axis.title=element_text(size=22),
+              axis.text = element_text(size=16,lineheight = 5),
+              legend.position = "top",
+              legend.text = element_text( size=16),
+              legend.title = element_blank(),
+              plot.margin=unit(c(0.5,0.5,0.8,0.8),"cm"),
+              panel.background = element_rect(fill = "aliceblue",colour = "grey",
+                                              size = 0.5, linetype = "solid"),
+              panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                              colour = "white"),
+              axis.title.x = element_text(margin = margin(t = 24)),
+              axis.title.y = element_text(margin = margin(r = 24)),
+              axis.title.y.right = element_text(margin = margin(l = 24))
+        ) + 
+        scale_x_datetime(date_labels = "%b %Y") +
+        scale_colour_manual(name="Time Series Label",
+                            values=c("red", "navy"), labels = c("Rain", "Well Elevation")) +
+        scale_y_continuous(sec.axis = sec_axis(~./5, name = "Rain Level (ft)"))
+      
+      
     } else {
       
       selected_data <- filter(selected_data, year >= start_year, year <= end_year)
@@ -298,11 +337,11 @@ server <- function(input, output, session) {
         theme(plot.title = element_text(hjust = 0.5,size=26),
               axis.title=element_text(size=22),
               axis.text = element_text(size=16,lineheight = 5),
-              legend.position = c(0.7, 0.8),
-              legend.text = element_text( size=18),
+              legend.position = "top",
+              legend.text = element_text( size=16),
               legend.title = element_blank(),
               plot.margin=unit(c(0.5,0.5,0.8,0.8),"cm"),
-              panel.background = element_rect(fill = "aliceblue",colour = "aliceblue",
+              panel.background = element_rect(fill = "aliceblue",colour = "grey",
                                               size = 0.5, linetype = "solid"),
               panel.grid.major = element_line(size = 0.5, linetype = 'solid',
                                               colour = "white"),
@@ -354,7 +393,7 @@ server <- function(input, output, session) {
         "Long" = c(long),
         "Start Date" = c(start_date),
         "End Date" = c(end_date),
-        "Num Missing" = c(num_missing),
+        "Missing" = c(num_missing),
         "Model" = c(model),
         "MAPE" = c(mape),
         "AIC" = c(aic)
@@ -373,7 +412,7 @@ server <- function(input, output, session) {
         "End Date" = c(end_date),
         "Mean" = c(mean),
         "St Dev" = c(stdev),
-        "Num Missing" = c(num_missing)
+        "Missing" = c(num_missing)
       )
     }
     well_df
